@@ -1,0 +1,16 @@
+# samconfig.toml is used for local development (sam deploy --guided, sam local invoke, etc.).
+# CI overrides stack_name and s3_prefix dynamically via CLI flags — no changes needed here for CI.
+#
+# First-time local setup: run `sam deploy --guided` and it will populate this file for you.
+
+version = 0.1
+
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "REPLACE_WITH_REPO_NAME"
+s3_bucket = "the-humane-league-sam-artifacts"
+s3_prefix = "REPLACE_WITH_REPO_NAME"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"

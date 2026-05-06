@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Timeout: 30
+    Runtime: nodejs22.x
+    Architectures:
+      - x86_64
+
+Resources:
+  MyFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Minify: false
+        Target: es2022
+        EntryPoints:
+          - handler.ts
+    Properties:
+      CodeUri: src/
+      Handler: handler.handler
+      Environment:
+        Variables:
+          # Secret name is derived from the stack name at deploy time: prod/{stack-name}/env
+          # Add one entry per key that exists in your Secrets Manager secret.
+          # The CI workflow creates the secret with placeholder values on first deploy.
+          EXAMPLE_KEY: !Sub "{{resolve:secretsmanager:prod/${AWS::StackName}/env:SecretString:ExampleKey}}"

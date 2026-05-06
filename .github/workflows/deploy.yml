@@ -1,0 +1,82 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::856373496210:role/github-sam-deploy
+          aws-region: us-east-1
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up SAM CLI
+        uses: aws-actions/setup-sam@v2
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bootstrap secrets
+        run: |
+          REPO="${{ github.event.repository.name }}"
+          SECRET_NAME="prod/${REPO}/env"
+
+          python3 -c "
+          import re
+          content = open('template.yaml').read()
+          keys = sorted(set(re.findall(r'\{\{resolve:secretsmanager:[^:}]+:SecretString:([^}]+)\}\}', content)))
+          print('\n'.join(keys))
+          " > /tmp/secret_keys.txt
+
+          if [ ! -s /tmp/secret_keys.txt ]; then
+            echo "No Secrets Manager references found — skipping secret bootstrap"
+            exit 0
+          fi
+
+          if aws secretsmanager describe-secret --secret-id "$SECRET_NAME" > /dev/null 2>&1; then
+            echo "Secret ${SECRET_NAME} already exists — skipping"
+          else
+            JSON=$(python3 -c "
+          import json
+          with open('/tmp/secret_keys.txt') as f:
+              keys = [k.strip() for k in f if k.strip()]
+          print(json.dumps({k: 'PLACEHOLDER' for k in keys}))
+          ")
+            aws secretsmanager create-secret \
+              --name "$SECRET_NAME" \
+              --description "Prod environment secrets for ${REPO}" \
+              --secret-string "$JSON"
+            echo "::notice title=Action required::${SECRET_NAME} created with placeholder values — update each key in AWS Secrets Manager before invoking the Lambda"
+          fi
+
+      - name: SAM build
+        run: sam build
+
+      - name: SAM deploy
+        run: |
+          sam deploy \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --stack-name "${{ github.event.repository.name }}" \
+            --s3-bucket the-humane-league-sam-artifacts \
+            --s3-prefix "${{ github.event.repository.name }}" \
+            --region us-east-1 \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
