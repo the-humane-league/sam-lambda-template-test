@@ -17,10 +17,10 @@ Resources:
         Minify: false
         Target: es2022
         EntryPoints:
-          - handler.ts
+          - src/handler.ts
     Properties:
-      CodeUri: src/
-      Handler: handler.handler
+      CodeUri: ./
+      Handler: src/handler.handler
       Environment:
         Variables:
           # Secret name is derived from the stack name at deploy time: prod/{stack-name}/env
