@@ -2,9 +2,11 @@
   "name": "sam-lambda-template",
   "version": "1.0.0",
   "private": true,
+  "dependencies": {
+    "esbuild": "^0.25.0"
+  },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.145",
-    "esbuild": "^0.25.0",
     "typescript": "^5.8.0"
   }
 }
